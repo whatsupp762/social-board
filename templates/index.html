@@ -1,0 +1,379 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Social Board | 团队社交看板</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <div class="container">
+        <header class="header">
+            <h1>🌱 Social Board</h1>
+            <p class="subtitle">认识团队里的每一个人 —— 分享你的研究方向与兴趣</p>
+        </header>
+
+        <section class="form-section">
+            <div class="form-card" id="formCard">
+                <h2 id="formTitle">📝 发布你的信息</h2>
+                <form id="profileForm" enctype="multipart/form-data">
+                    <input type="hidden" id="editId" name="edit_id" value="">
+                    <input type="hidden" id="editToken" name="edit_token" value="">
+
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label for="name">姓名 / 昵称 *</label>
+                            <input type="text" id="name" name="name" placeholder="怎么称呼你？" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="contact">联系方式</label>
+                            <input type="text" id="contact" name="contact" placeholder="微信 / 邮箱 / 飞书...">
+                        </div>
+                    </div>
+
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label for="mbti">MBTI</label>
+                            <select id="mbti" name="mbti">
+                                <option value="">— 选择 —</option>
+                                <option value="INTJ">INTJ</option>
+                                <option value="INTP">INTP</option>
+                                <option value="ENTJ">ENTJ</option>
+                                <option value="ENTP">ENTP</option>
+                                <option value="INFJ">INFJ</option>
+                                <option value="INFP">INFP</option>
+                                <option value="ENFJ">ENFJ</option>
+                                <option value="ENFP">ENFP</option>
+                                <option value="ISTJ">ISTJ</option>
+                                <option value="ISFJ">ISFJ</option>
+                                <option value="ESTJ">ESTJ</option>
+                                <option value="ESFJ">ESFJ</option>
+                                <option value="ISTP">ISTP</option>
+                                <option value="ISFP">ISFP</option>
+                                <option value="ESTP">ESTP</option>
+                                <option value="ESFP">ESFP</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="location">所在城市</label>
+                            <input type="text" id="location" name="location" placeholder="例如：北京、上海、杭州...">
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="research">研究方向 / 工作领域</label>
+                        <input type="text" id="research" name="research" placeholder="例如：计算机视觉、后端开发、产品经理...">
+                    </div>
+                    <div class="form-group">
+                        <label for="interests">兴趣爱好</label>
+                        <input type="text" id="interests" name="interests" placeholder="例如：摄影、徒步、烘焙、独立游戏...">
+                    </div>
+                    <div class="form-group">
+                        <label for="company">公司 / 学校</label>
+                        <input type="text" id="company" name="company" placeholder="例如：清华大学、字节跳动...">
+                    </div>
+
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label for="website">个人网站</label>
+                            <input type="url" id="website" name="website" placeholder="https://your-site.com">
+                        </div>
+                        <div class="form-group">
+                            <label for="github">GitHub</label>
+                            <input type="text" id="github" name="github" placeholder="用户名或完整链接">
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="skills">技能标签 <span class="hint">（用逗号分隔）</span></label>
+                        <input type="text" id="skills" name="skills" placeholder="例如：Python, React, 数据分析, 产品设计...">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="bio">详细介绍</label>
+                        <textarea id="bio" name="bio" rows="4" placeholder="多写一点关于你自己吧，研究方向的具体内容、最近在做的事、想找人聊的话题……"></textarea>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="avatar">头像 / 照片 <span id="avatarHint" class="hint" style="display:none;">（留空则保留原头像）</span></label>
+                        <input type="file" id="avatar" name="avatar" accept="image/png,image/jpeg,image/gif,image/webp">
+                        <div class="file-hint">支持 PNG、JPG、GIF、WebP，最大 5MB</div>
+                    </div>
+
+                    <div class="form-actions">
+                        <button type="submit" class="btn-submit" id="submitBtn">✨ 发布到看板</button>
+                        <button type="button" class="btn-secondary" id="cancelEditBtn" style="display:none;" onclick="cancelEdit()">取消编辑</button>
+                    </div>
+                </form>
+                <div id="formMessage" class="form-message"></div>
+            </div>
+        </section>
+
+        <section class="board-section">
+            <div class="board-header">
+                <h2>👥 成员看板</h2>
+                <span id="memberCount" class="member-count">0 人</span>
+            </div>
+            <div id="peopleGrid" class="people-grid">
+                <!-- Cards injected by JS -->
+            </div>
+        </section>
+    </div>
+
+    <footer class="footer">
+        <p>Built with vibe 🫶 · Social Board</p>
+    </footer>
+
+    <script>
+        const API_URL = '/api/people';
+        const grid = document.getElementById('peopleGrid');
+        const countLabel = document.getElementById('memberCount');
+        const form = document.getElementById('profileForm');
+        const msgBox = document.getElementById('formMessage');
+        const formTitle = document.getElementById('formTitle');
+        const submitBtn = document.getElementById('submitBtn');
+        const cancelEditBtn = document.getElementById('cancelEditBtn');
+        const avatarHint = document.getElementById('avatarHint');
+        const editIdField = document.getElementById('editId');
+        const editTokenField = document.getElementById('editToken');
+        const formCard = document.getElementById('formCard');
+
+        function getTokens() {
+            try {
+                return JSON.parse(localStorage.getItem('social_tokens') || '{}');
+            } catch { return {}; }
+        }
+
+        function saveToken(id, token) {
+            const tokens = getTokens();
+            tokens[id] = token;
+            localStorage.setItem('social_tokens', JSON.stringify(tokens));
+        }
+
+        function removeToken(id) {
+            const tokens = getTokens();
+            delete tokens[id];
+            localStorage.setItem('social_tokens', JSON.stringify(tokens));
+        }
+
+        function canEdit(id) {
+            return !!getTokens()[id];
+        }
+
+        let cachedPeople = [];
+
+        async function loadPeople() {
+            try {
+                const res = await fetch(API_URL);
+                const data = await res.json();
+                cachedPeople = data.people || [];
+                renderPeople(cachedPeople);
+            } catch (err) {
+                grid.innerHTML = '<div class="empty-state">加载失败，请刷新重试 😢</div>';
+            }
+        }
+
+        function renderPeople(people) {
+            countLabel.textContent = `${people.length} 人`;
+            if (people.length === 0) {
+                grid.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-icon">🌌</div>
+                        <div>还没有人发布信息，来做第一个吧！</div>
+                    </div>
+                `;
+                return;
+            }
+            grid.innerHTML = people.map(p => {
+                const editable = canEdit(p.id);
+                const actions = editable ? `
+                    <div class="card-actions">
+                        <button class="action-btn edit" onclick="event.preventDefault(); startEdit(${p.id})">✏️ 编辑</button>
+                        <button class="action-btn delete" onclick="event.preventDefault(); deletePerson(${p.id})">🗑 删除</button>
+                    </div>
+                ` : '';
+                return `
+                <a class="person-card" href="/person/${p.id}">
+                    <div class="card-header">
+                        ${p.avatar ? `<img class="avatar-img" src="${escapeHtml(p.avatar)}" alt="">` : `<div class="avatar">${getInitials(p.name)}</div>`}
+                        <div class="name-wrap">
+                            <h3 class="name">${escapeHtml(p.name)}${p.mbti ? ` <span class="mbti-badge">${escapeHtml(p.mbti)}</span>` : ''}</h3>
+                            ${p.contact ? `<span class="contact">${escapeHtml(p.contact)}</span>` : ''}
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        ${p.research ? `
+                            <div class="tag-row">
+                                <span class="tag-label">🔬</span>
+                                <span class="tag-value">${escapeHtml(p.research)}</span>
+                            </div>
+                        ` : ''}
+                        ${p.interests ? `
+                            <div class="tag-row">
+                                <span class="tag-label">💖</span>
+                                <span class="tag-value">${escapeHtml(p.interests)}</span>
+                            </div>
+                        ` : ''}
+                        ${p.company ? `
+                            <div class="tag-row">
+                                <span class="tag-label">🏢</span>
+                                <span class="tag-value">${escapeHtml(p.company)}</span>
+                            </div>
+                        ` : ''}
+                        ${p.location ? `
+                            <div class="tag-row">
+                                <span class="tag-label">📍</span>
+                                <span class="tag-value">${escapeHtml(p.location)}</span>
+                            </div>
+                        ` : ''}
+                        ${p.bio ? `<div class="card-bio-preview">${escapeHtml(truncate(p.bio, 70))}</div>` : ''}
+                    </div>
+                    ${actions}
+                    <div class="card-footer">
+                        <span class="time">${formatTime(p.created_at)}</span>
+                        <span class="view-detail">查看详情 →</span>
+                    </div>
+                </a>
+            `}).join('');
+        }
+
+        function startEdit(id) {
+            const p = cachedPeople.find(x => x.id === id);
+            if (!p) return;
+            const token = getTokens()[id];
+            if (!token) return;
+
+            document.getElementById('name').value = p.name || '';
+            document.getElementById('contact').value = p.contact || '';
+            document.getElementById('mbti').value = p.mbti || '';
+            document.getElementById('location').value = p.location || '';
+            document.getElementById('research').value = p.research || '';
+            document.getElementById('interests').value = p.interests || '';
+            document.getElementById('company').value = p.company || '';
+            document.getElementById('website').value = p.website || '';
+            document.getElementById('github').value = p.github || '';
+            document.getElementById('skills').value = p.skills || '';
+            document.getElementById('bio').value = p.bio || '';
+            editIdField.value = id;
+            editTokenField.value = token;
+
+            formTitle.textContent = '✏️ 编辑你的信息';
+            submitBtn.textContent = '💾 保存修改';
+            cancelEditBtn.style.display = 'inline-block';
+            avatarHint.style.display = '';
+            formCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+
+        function cancelEdit() {
+            form.reset();
+            editIdField.value = '';
+            editTokenField.value = '';
+            formTitle.textContent = '📝 发布你的信息';
+            submitBtn.textContent = '✨ 发布到看板';
+            cancelEditBtn.style.display = 'none';
+            avatarHint.style.display = 'none';
+        }
+
+        async function deletePerson(id) {
+            const token = getTokens()[id];
+            if (!token) return;
+            if (!confirm('确定要删除这条信息吗？此操作不可撤销。')) return;
+
+            try {
+                const res = await fetch(`${API_URL}/${id}`, {
+                    method: 'DELETE',
+                    headers: { 'X-Edit-Token': token },
+                });
+                if (res.ok) {
+                    removeToken(id);
+                    showMessage('删除成功', 'success');
+                    loadPeople();
+                } else {
+                    const data = await res.json().catch(() => ({}));
+                    showMessage(data.error || '删除失败', 'error');
+                }
+            } catch (err) {
+                showMessage('网络错误', 'error');
+            }
+        }
+
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const formData = new FormData(form);
+            const name = formData.get('name');
+            if (!name || !name.trim()) {
+                showMessage('姓名不能为空', 'error');
+                return;
+            }
+
+            const editId = editIdField.value;
+            const isEditing = !!editId;
+
+            try {
+                const url = isEditing ? `${API_URL}/${editId}/edit` : API_URL;
+                const res = await fetch(url, { method: 'POST', body: formData });
+                const data = await res.json();
+                if (res.ok) {
+                    showMessage(isEditing ? '修改成功！🎉' : '发布成功！🎉', 'success');
+                    if (!isEditing && data.edit_token) {
+                        saveToken(data.id, data.edit_token);
+                    }
+                    form.reset();
+                    cancelEdit();
+                    loadPeople();
+                } else {
+                    showMessage(data.error || '操作失败，请重试。', 'error');
+                }
+            } catch (err) {
+                showMessage('网络错误，请检查连接。', 'error');
+            }
+        });
+
+        function getInitials(name) {
+            if (!name) return '?';
+            return name.slice(0, 2).toUpperCase();
+        }
+
+        function escapeHtml(str) {
+            const div = document.createElement('div');
+            div.textContent = str;
+            return div.innerHTML;
+        }
+
+        function truncate(str, len) {
+            if (!str || str.length <= len) return str;
+            return str.slice(0, len) + '...';
+        }
+
+        function formatTime(iso) {
+            if (!iso) return '';
+            const d = new Date(iso);
+            return d.toLocaleDateString('zh-CN', { month: 'short', day: 'numeric' });
+        }
+
+        function showMessage(text, type) {
+            msgBox.textContent = text;
+            msgBox.className = `form-message ${type}`;
+            setTimeout(() => { msgBox.className = 'form-message'; msgBox.textContent = ''; }, 3000);
+        }
+
+        // Check URL hash for edit mode from detail page
+        function checkHash() {
+            const m = location.hash.match(/^#edit=(\d+)$/);
+            if (m) {
+                const id = parseInt(m[1], 10);
+                history.replaceState(null, '', '/');
+                // Wait for people to load then start edit
+                const interval = setInterval(() => {
+                    if (cachedPeople.length > 0) {
+                        clearInterval(interval);
+                        if (canEdit(id)) startEdit(id);
+                    }
+                }, 100);
+            }
+        }
+
+        loadPeople().then(checkHash);
+    </script>
+</body>
+</html>
