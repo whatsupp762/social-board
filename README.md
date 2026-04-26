@@ -6,6 +6,12 @@
 ![SQLite](https://img.shields.io/badge/SQLite-3-green)
 ![License](https://img.shields.io/badge/License-MIT-yellow)
 
+## 一键部署
+
+[![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/whatsupp762/social-board)
+
+点击上方按钮，选择 **Free** 计划，1 分钟后即可拥有一个公共的社交看板网站。
+
 ## 功能
 
 - **📝 发布信息**：填写姓名、研究方向、兴趣爱好、联系方式、MBTI、技能标签等
@@ -19,14 +25,14 @@
 
 - **后端**：Python + Flask + SQLite
 - **前端**：纯 HTML/CSS/JS（无框架依赖）
-- **部署**：单文件 Flask 应用，开箱即用
+- **部署**：支持 Render / Railway / Fly.io 等任何支持 Python 的 PaaS 平台
 
-## 快速开始
+## 本地开发
 
 ### 安装依赖
 
 ```bash
-pip install flask
+pip install -r requirements.txt
 ```
 
 ### 启动服务
@@ -37,13 +43,32 @@ python app.py
 
 默认运行在 `http://127.0.0.1:5001`，浏览器打开即可使用。
 
-### 生产部署
+## 部署到 Render（推荐）
 
-开发服务器仅用于本地测试。生产环境建议使用 Gunicorn：
+1. Fork 或导入本仓库到你的 GitHub
+2. 登录 [Render](https://render.com)，点击 **New + → Web Service**
+3. 选择 GitHub 仓库 `social-board`
+4. 保持默认配置，点击 **Create Web Service**
+5. 等待 1-2 分钟，获得公共网址（如 `https://social-board-xxxx.onrender.com`）
+6. 把网址分享给团队，大家直接访问即可
+
+> Render Free 计划：服务会在 15 分钟无访问后休眠，首次访问可能需要 30 秒唤醒。数据会持久化保存。
+
+## 部署到其他平台
+
+### Railway / Fly.io / PythonAnywhere
+
+本应用是纯 Flask + SQLite，任何支持 Python 的 PaaS 平台均可部署：
+
+- **Railway**：导入 GitHub 仓库，自动识别 `requirements.txt`
+- **Fly.io**：使用 `fly launch` + `fly deploy`
+- **PythonAnywhere**：上传代码，配置 WSGI 指向 `app.py`
+
+### 自建服务器
 
 ```bash
-pip install gunicorn
-gunicorn -w 2 -b 0.0.0.0:5001 app:app
+pip install -r requirements.txt
+gunicorn app:app --bind 0.0.0.0:8000 --workers 2
 ```
 
 ## 项目结构
@@ -52,6 +77,7 @@ gunicorn -w 2 -b 0.0.0.0:5001 app:app
 social/
 ├── app.py                 # Flask 后端主文件
 ├── requirements.txt       # Python 依赖
+├── render.yaml            # Render 部署配置
 ├── social.db              # SQLite 数据库（自动创建）
 ├── static/
 │   ├── style.css          # 样式文件
